@@ -1,48 +1,65 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+from plant_common_names import latin_to_english # ✅ Import from your separate file
 
 app = Flask(__name__)
 CORS(app)
 
-PLANTNET_API_KEY = "2b10jzAcrteKEXCPI5pdX8edzu"
-PLANTNET_API_URL = f"https://my-api.plantnet.org/v2/identify/all?api-key={PLANTNET_API_KEY}"
+API_KEY = "2b10NizC5IUi7rNLawqkIutNju"
+
+@app.route('/')
+def home():
+    return '✅ Plant Identification API running!'
 
 @app.route('/identify', methods=['POST'])
-def identify_plant():
+def identify():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
+
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({'error': 'No image selected'}), 400
+
+    url = "https://my-api.plantnet.org/v2/identify/all"
+    params = {"api-key": API_KEY}
+    files = {'images': (image.filename, image.stream, image.content_type)}
+    data = {'organs': 'leaf'}
+
     try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image uploaded'}), 400
+        response = requests.post(url, files=files, data=data, params=params)
+        response.raise_for_status()
+        result = response.json()
 
-        image_file = request.files['image']
-        files = {
-            'images': (image_file.filename, image_file.stream, image_file.mimetype)
-        }
+        if 'results' in result and result['results']:
+            best_match = result['results'][0]
+            species = best_match.get('species', {})
+            latin_name = species.get('scientificNameWithoutAuthor', 'Unknown')
+            common_names = species.get('commonNames', [])
 
-        response = requests.post(PLANTNET_API_URL, files=files)
-        if response.status_code != 200:
-            print("PlantNet API error:", response.status_code, response.text)  # LOG HERE
-            return jsonify({'error': 'Failed to identify plant'}), 500
+            # Try to find an English common name
+            english_name = None
+            for name in common_names:
+                if name.isascii() and name.strip() and not any(c in name for c in 'éèçαλ'):
+                    english_name = name.title()
+                    break
 
-        data = response.json()
-        if not data.get('results'):
-            return jsonify({'plant': None, 'message': 'No plant identified'}), 200
+            # Use dictionary fallback if needed
+            if not english_name:
+                english_name = latin_to_common.get(latin_name, "No English name found")
 
-        top_result = data['results'][0]
-        plant_name = top_result['species']['scientificNameWithoutAuthor']
-        score = round(top_result['score'] * 100, 2)
-        images = top_result.get('images')
-        image_url = images[0]['url'].replace("&amp;", "&") if images else None
+            return jsonify({
+                'plant': latin_name,
+                'common': english_name,
+                'score': round(best_match.get('score', 0.0) * 100, 2)
+            })
 
-        return jsonify({
-            'plant': plant_name,
-            'score': score,
-            'image': image_url
-        })
+        return jsonify({'error': 'No plant found'}), 404
 
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'API request failed', 'details': str(e)}), 500
     except Exception as e:
-        print("SERVER ERROR:", e)  # LOG ERROR
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
