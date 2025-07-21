@@ -36,12 +36,12 @@ def identify():
             latin_name = species.get('scientificNameWithoutAuthor', 'Unknown')
             common_names = species.get('commonNames', [])
 
-            # Pick the first common name if available
-            english_name = common_names[0].title() if common_names else "No common name found"
+            # Use common name if available
+            common_name = common_names[0].title() if common_names else "No common name found"
 
             return jsonify({
                 'plant': latin_name,
-                'common': english_name,
+                'common': common_name,
                 'score': round(best_match.get('score', 0.0) * 100, 2)
             })
 
