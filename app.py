@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -36,12 +37,12 @@ def identify():
             latin_name = species.get('scientificNameWithoutAuthor', 'Unknown')
             common_names = species.get('commonNames', [])
 
-            # Use common name if available
-            common_name = common_names[0].title() if common_names else "No common name found"
+            # Use common name from API if available
+            english_name = common_names[0].title() if common_names else "No common name found"
 
             return jsonify({
                 'plant': latin_name,
-                'common': common_name,
+                'common': english_name,
                 'score': round(best_match.get('score', 0.0) * 100, 2)
             })
 
@@ -53,4 +54,5 @@ def identify():
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
