@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
-from plant_common_names import latin_to_english # ✅ Import from your separate file
 
 app = Flask(__name__)
 CORS(app)
@@ -37,16 +36,8 @@ def identify():
             latin_name = species.get('scientificNameWithoutAuthor', 'Unknown')
             common_names = species.get('commonNames', [])
 
-            # Try to find an English common name
-            english_name = None
-            for name in common_names:
-                if name.isascii() and name.strip() and not any(c in name for c in 'éèçαλ'):
-                    english_name = name.title()
-                    break
-
-            # Use dictionary fallback if needed
-            if not english_name:
-                english_name = latin_to_common.get(latin_name, "No English name found")
+            # Pick the first common name if available
+            english_name = common_names[0].title() if common_names else "No common name found"
 
             return jsonify({
                 'plant': latin_name,
