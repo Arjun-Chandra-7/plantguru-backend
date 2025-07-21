@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = "2b10NizC5IUi7rNLawqkIutNju"
+API_KEY = "2b10NizC5IUi7rNLawqkIutNju"  # Replace with your real PlantNet API key
 
 @app.route('/')
 def home():
@@ -31,19 +31,18 @@ def identify():
         response.raise_for_status()
         result = response.json()
 
-        if 'results' in result and result['results']:
+        if isinstance(result.get('results'), list) and result['results']:
             best_match = result['results'][0]
             species = best_match.get('species', {})
-            latin_name = species.get('scientificNameWithoutAuthor', 'Unknown')
-            common_names = species.get('commonNames', [])
 
-            # Use common name from API if available
-            english_name = common_names[0].title() if common_names else "No common name found"
+            latin_name = species.get('scientificNameWithoutAuthor') or species.get('scientificName') or "Unknown"
+            common_names = species.get('commonNames', [])
+            score = best_match.get('score', 0.0)
 
             return jsonify({
                 'plant': latin_name,
-                'common': english_name,
-                'score': round(best_match.get('score', 0.0) * 100, 2)
+                'common': common_names[0].title() if common_names else "No common name found",
+                'score': round(score * 100, 2)
             })
 
         return jsonify({'error': 'No plant found'}), 404
@@ -55,4 +54,5 @@ def identify():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    # 🔥 This makes it visible on your local network (phones, laptops)
+    app.run(host='0.0.0.0', port=port, debug=True)
