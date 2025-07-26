@@ -4,8 +4,9 @@ import requests
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins
 
+# 🔑 Your PlantNet API key
 API_KEY = "2b10NizC5IUi7rNLawqkIutNju"
 
 @app.route('/')
