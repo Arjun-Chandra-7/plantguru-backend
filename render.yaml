@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: plant-guru-app
-    env: python
-    buildCommand: ""
-    startCommand: gunicorn app:app
-    region: oregon
